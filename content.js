@@ -9,9 +9,13 @@ function enablePrintPreview() {
     // Only process link and style tags
     if (ownerNode instanceof HTMLLinkElement || ownerNode instanceof HTMLStyleElement) {
       // Store the original media attribute in a data attribute
-      ownerNode.dataset.originalMedia = ownerNode.media;
-      // Force the media type to 'print'
-      ownerNode.media = 'print';
+      ownerNode.dataset.originalMedia = ownerNode.media || '';
+      // If the stylesheet was for print, make it apply to all media (so it shows on screen)
+      // If it was for screen/all, keep it as is so both print and screen styles show
+      if (ownerNode.dataset.originalMedia === 'print') {
+        ownerNode.media = 'all';
+      }
+      // For screen or all media stylesheets, we keep them as is
     }
   }
   window[stateKey] = true;
