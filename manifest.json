@@ -1,16 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Print Preview",
-  "description": "Toggles a page's CSS to the print media query to preview the print layout.",
-  "version": "1.0",
-  "permissions": ["activeTab", "scripting"],
+  "description": "Opens the current page in a new tab with print media emulation enabled.",
+  "version": "2.0",
+  "permissions": ["activeTab", "debugger", "tabs"],
   "action": {
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Toggle Print Preview"
+    "default_title": "Open Print Preview in New Tab"
   },
   "background": {
     "service_worker": "background.js"
