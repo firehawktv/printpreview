@@ -18,7 +18,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     printPreviewTabs.add(newTab.id);
 
     // Attach debugger to the blank tab
-    chrome.debugger.attach({ tabId: newTab.id }, "1.3", async () => {
+    chrome.debugger.attach({ tabId: newTab.id }, "1.3", () => {
       if (chrome.runtime.lastError) {
         console.error("Debugger attach failed:", chrome.runtime.lastError);
         return;
@@ -29,7 +29,7 @@ chrome.action.onClicked.addListener(async (tab) => {
         { tabId: newTab.id },
         "Emulation.setEmulatedMedia",
         { media: "print" },
-        async () => {
+        () => {
           if (chrome.runtime.lastError) {
             console.error("Emulation failed:", chrome.runtime.lastError);
             return;
@@ -38,11 +38,9 @@ chrome.action.onClicked.addListener(async (tab) => {
           console.log("Print media emulation enabled for tab", newTab.id);
 
           // Now navigate to the target URL - it will load with print styles
-          try {
-            await chrome.tabs.update(newTab.id, { url: targetUrl });
-          } catch (error) {
+          chrome.tabs.update(newTab.id, { url: targetUrl }).catch((error) => {
             console.error("Failed to navigate:", error);
-          }
+          });
         }
       );
     });
