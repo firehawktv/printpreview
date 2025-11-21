@@ -1,9 +1,35 @@
 // Track tabs that are in print preview mode
 const printPreviewTabs = new Set();
 
+// Check if URL is valid for debugger attachment
+function isValidUrl(url) {
+  if (!url) return false;
+
+  // Debugger cannot attach to chrome:// pages, extension pages, or webstore
+  const restrictedPrefixes = [
+    'chrome://',
+    'chrome-extension://',
+    'edge://',
+    'about:',
+    'chrome.google.com/webstore'
+  ];
+
+  return !restrictedPrefixes.some(prefix => url.startsWith(prefix));
+}
+
 // Listen for clicks on the extension icon
 chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.url) return;
+  if (!tab.url) {
+    console.error("No URL found for current tab");
+    return;
+  }
+
+  // Check if URL is valid for debugger
+  if (!isValidUrl(tab.url)) {
+    console.error("Cannot preview this page type:", tab.url);
+    alert("Print preview cannot be used on this page (restricted URL)");
+    return;
+  }
 
   try {
     const targetUrl = tab.url;
@@ -20,7 +46,11 @@ chrome.action.onClicked.addListener(async (tab) => {
     // Attach debugger to the blank tab
     chrome.debugger.attach({ tabId: newTab.id }, "1.3", () => {
       if (chrome.runtime.lastError) {
-        console.error("Debugger attach failed:", chrome.runtime.lastError);
+        console.error("Debugger attach failed:", chrome.runtime.lastError.message || chrome.runtime.lastError);
+        alert("Failed to attach debugger: " + (chrome.runtime.lastError.message || "Unknown error"));
+        // Close the blank tab since we failed
+        chrome.tabs.remove(newTab.id);
+        printPreviewTabs.delete(newTab.id);
         return;
       }
 
@@ -31,7 +61,11 @@ chrome.action.onClicked.addListener(async (tab) => {
         { media: "print" },
         () => {
           if (chrome.runtime.lastError) {
-            console.error("Emulation failed:", chrome.runtime.lastError);
+            console.error("Emulation failed:", chrome.runtime.lastError.message || chrome.runtime.lastError);
+            alert("Failed to enable print emulation: " + (chrome.runtime.lastError.message || "Unknown error"));
+            // Close the tab since emulation failed
+            chrome.tabs.remove(newTab.id);
+            printPreviewTabs.delete(newTab.id);
             return;
           }
 
@@ -46,6 +80,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     });
   } catch (error) {
     console.error("Error creating print preview tab:", error);
+    alert("Error creating print preview: " + error.message);
   }
 });
 
