@@ -6,43 +6,45 @@ chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.url) return;
 
   try {
-    // Create a new tab with the same URL
+    const targetUrl = tab.url;
+
+    // Create a new tab with about:blank first
     const newTab = await chrome.tabs.create({
-      url: tab.url,
+      url: 'about:blank',
       active: true
     });
 
     // Mark this tab as a print preview tab
     printPreviewTabs.add(newTab.id);
 
-    // Wait for the tab to finish loading before attaching debugger
-    chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
-      if (tabId === newTab.id && changeInfo.status === 'complete') {
-        // Remove this listener
-        chrome.tabs.onUpdated.removeListener(listener);
+    // Attach debugger to the blank tab
+    chrome.debugger.attach({ tabId: newTab.id }, "1.3", async () => {
+      if (chrome.runtime.lastError) {
+        console.error("Debugger attach failed:", chrome.runtime.lastError);
+        return;
+      }
 
-        // Attach debugger and enable print emulation
-        chrome.debugger.attach({ tabId: newTab.id }, "1.3", () => {
+      // Enable print media emulation BEFORE loading the actual page
+      chrome.debugger.sendCommand(
+        { tabId: newTab.id },
+        "Emulation.setEmulatedMedia",
+        { media: "print" },
+        async () => {
           if (chrome.runtime.lastError) {
-            console.error("Debugger attach failed:", chrome.runtime.lastError);
+            console.error("Emulation failed:", chrome.runtime.lastError);
             return;
           }
 
-          // Enable print media emulation
-          chrome.debugger.sendCommand(
-            { tabId: newTab.id },
-            "Emulation.setEmulatedMedia",
-            { media: "print" },
-            () => {
-              if (chrome.runtime.lastError) {
-                console.error("Emulation failed:", chrome.runtime.lastError);
-              } else {
-                console.log("Print media emulation enabled for tab", newTab.id);
-              }
-            }
-          );
-        });
-      }
+          console.log("Print media emulation enabled for tab", newTab.id);
+
+          // Now navigate to the target URL - it will load with print styles
+          try {
+            await chrome.tabs.update(newTab.id, { url: targetUrl });
+          } catch (error) {
+            console.error("Failed to navigate:", error);
+          }
+        }
+      );
     });
   } catch (error) {
     console.error("Error creating print preview tab:", error);
